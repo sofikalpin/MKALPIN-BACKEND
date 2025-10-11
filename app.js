@@ -16,10 +16,29 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Configuración de CORS para múltiples orígenes
+const allowedOrigins = process.env.ALLOWED_ORIGINS ?
+    process.env.ALLOWED_ORIGINS.split(',') :
+    [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost'
+    ];
+
 app.use(cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', 'http://20.121.65.197:3000', 'http://20.121.65.197', 'http://localhost'],
+    origin: function (origin, callback) {
+        // Permitir requests sin origen (como aplicaciones móviles o curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        } else {
+            return callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -52,7 +71,7 @@ const upload = multer({
     limits: { fileSize: 1024 * 1024 * 5 }
 });
 
-const dbURL = process.env.DB_URL || 'mongodb://localhost:27017/inmobiliaria';
+const dbURL = process.env.MONGO_URI || 'mongodb://localhost:27017/inmobiliaria';
 mongoose.connect(dbURL)
     .then(() => console.log('Conectado a MongoDB'))
     .catch(err => console.error('Error al conectar a MongoDB:', err));
